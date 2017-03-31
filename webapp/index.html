@@ -1,0 +1,230 @@
+
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Smart Door App</title>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script src="https://webduino.io/components/webduino-js/dist/webduino-all.min.js"></script>
+  <script src="https://blockly.webduino.io/webduino-blockly.js"></script>
+  <script src="https://blockly.webduino.io/lib/firebase.js"></script>
+  <script src="https://blockly.webduino.io/lib/runtime.min.js"></script>
+
+<style>
+/* The snackbar - position it at the bottom and in the middle of the screen */
+#snackbar {
+    visibility: hidden; /* Hidden by default. Visible on click */
+    min-width: 250px; /* Set a default minimum width */
+    margin-left: -125px; /* Divide value of min-width by 2 */
+    background-color: #333; /* Black background color */
+    color: #fff; /* White text color */
+    text-align: center; /* Centered text */
+    border-radius: 2px; /* Rounded borders */
+    padding: 16px; /* Padding */
+    position: fixed; /* Sit on top of the screen */
+    z-index: 1; /* Add a z-index if needed */
+    left: 50%; /* Center the snackbar */
+    bottom: 30px; /* 30px from the bottom */
+}
+
+/* Show the snackbar when clicking on a button (class added with JavaScript) */
+#snackbar.show {
+    visibility: visible; /* Show the snackbar */
+
+/* Add animation: Take 0.5 seconds to fade in and out the snackbar. 
+However, delay the fade out process for 2.5 seconds */
+    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+/* Animations to fade the snackbar in and out */
+@-webkit-keyframes fadein {
+    from {bottom: 0; opacity: 0;} 
+    to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+}
+
+@-webkit-keyframes fadeout {
+    from {bottom: 30px; opacity: 1;} 
+    to {bottom: 0; opacity: 0;}
+}
+
+@keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+</style>
+
+</head>
+
+<body>
+<h3>設定你需要提醒的事項:</h3>
+<input id="Speakdata" value="javascript 94狂"></input>
+
+<h3>光敏電阻的係數:</h3>
+<div id="demo-area-01-show"></div>
+
+<div id="button1"></div>
+<!-- The actual snackbar -->
+<div id="snackbar">貼心小提醒ㄡ...</div>
+
+<script id="jsbin-javascript">
+var speakdata;
+
+var photocell;
+var rgbled;
+var sw=0;
+
+toast("歡迎來到手機版 ！！");
+//Invokpostdata(0,1);
+
+
+boardReady({board: 'Smart', url: '172.20.10.5', multi: true}, function (board) {
+  board.systemReset();
+  board.samplingInterval = 50;
+  
+  photocell = getPhotocell(board, 0);//光敏電阻
+  
+  rgbled = getRGBLedCathode(board, 15, 12, 13);//led
+
+  button = getPullupButton(board, 4);//button
+
+  photocell.on(function(val){
+    photocell.detectedVal = val;
+    //alert(photocell.detectedVal);
+    document.getElementById("demo-area-01-show").innerHTML = photocell.detectedVal;
+    if (photocell.detectedVal > 0 && photocell.detectedVal <= 0.2) {
+        rgbled.setColor('#ff0000');
+
+        //Invokpostdata(1,0);
+        toast("貼心小提醒...");
+
+    } else if (photocell.detectedVal > 0.2 && photocell.detectedVal <= 0.4) {
+      rgbled.setColor('#009900');
+
+    } else if (photocell.detectedVal > 0.4 && photocell.detectedVal <= 0.6) {
+      rgbled.setColor('#3333ff');
+      sw=0;
+    } else {
+      sw=0;
+      //rgbled.setColor('#000000');
+      //rgbled.setColor('#ff00ff');
+
+
+
+    }
+  });
+
+  button.on("pressed", function(){
+      console.log("pressed");
+        document.getElementById("button1").innerHTML = '按下';
+        toast("鎖著門 ！！");
+
+    });
+    button.on("released", function(){
+      console.log("released");
+        document.getElementById("button1").innerHTML = '放開';
+        toast("開鎖 ！！");
+
+    });
+    button.on("longPress", function(){
+      console.log("longPress");
+        document.getElementById("button1").innerHTML = '長按';
+        toast("可能有小偷破門而入 ！！");
+
+    });
+
+});
+
+
+
+
+function toast(data) {
+
+    document.getElementById("snackbar").innerHTML = data;
+    // Get the snackbar DIV
+    var x = document.getElementById("snackbar")
+
+    // Add the "show" class to DIV
+    x.className = "show";
+
+    // After 3 seconds, remove the show class from DIV
+    setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+}
+
+
+
+function Invokpostdata(isopen,isclose)
+{
+
+   $.get('https://smartdoor-88b17.firebaseio.com/users.json', function(response){
+
+        var rss = JSON.stringify(response);
+          alert(rss);
+
+        });
+
+
+var now = new Date();
+
+   var data = {
+      "isopen": isopen,
+      "isclose": isclose,
+      "temperature": 1,
+      "timestamp": now,
+      "username": "從手機家裡大門"
+      };
+
+            $.ajax({
+                url: "https://smartdoor-88b17.firebaseio.com/users.json",
+                type: "POST",
+                dataType: "JSON",
+                data: JSON.stringify(data),
+                timeout: 30000,
+                async: true,
+                crossDomain: true,
+                success: function(resault) {
+
+                    if (resault != null) {
+                        try {
+                            // console.log("Rename:");
+                            // console.log(resault);
+                        } catch (e) {};
+                    }
+                    if (resault != null && resault.RetrunCode == 0) {
+
+                        //success
+                        //var AvailableListdata = JSON.parse(resault.Resopnse);
+                        
+
+
+                    } else {
+                        //_err_code = (resault != null) ? resault.RetrunCode : "93002001"
+                        //that.addClass("editable");
+                        //that.focus();
+                        //alert(resault);
+                        //$editArea.find(".error span").html(L10N.error_msg[_err_code])
+
+                    }
+                },
+                error: function(jqXHR, b, c) {
+
+                    try {
+                        // error_handling(jqXHR.status, jqXHR.responseText);
+                        // console.log(jqXHR);
+                        alert(jqXHR);
+                    } catch (e) {};
+                }
+            });
+
+}
+
+</script>
+
+</body>
+</html>
